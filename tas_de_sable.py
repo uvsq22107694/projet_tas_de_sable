@@ -7,3 +7,17 @@
 # https://github.com/uvsq-info/l1-python
 #########################################
 
+# import des librairies
+
+
+# définition d'une constante (cap)
+
+
+# définition des variables globales
+
+
+# définition des fonctions (docstring)
+
+
+# programme principal définition des widgets/événements
+# gestion des événements

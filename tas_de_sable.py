@@ -14,20 +14,23 @@ from tkinter import filedialog as fd
 import tkinter as tk
 import os
 import random
-import copy
+import pickle
+import marshal
 from turtle import width
 
 # définition d'une constante (cap)
 
 CANVAS_WIDTH, CANVAS_HEIGHT = 600, 600
-GRILLE_WIDTH, GRILLE_HEIGHT = 20, 20
+GRILLE_WIDTH, GRILLE_HEIGHT = 100, 100
+NOMBRE_GRAIN_MAX = 100
 
 # définition des variables globales
 
-global grille_aleatoire,arret,idduafter
+global grille_aleatoire,arret,idduafter,afficherchiffre
 grille_aleatoire = []
 idduafter = None
 arret = True
+afficherchiffre = False
 
 for i in range(GRILLE_WIDTH):
     grille_aleatoire.append([])
@@ -36,21 +39,34 @@ for i in range(GRILLE_WIDTH):
 
 # définition des fonctions (docstring)
 
-def affiche():
+def affiche(affchiffre):
     
-    global grille_aleatoire
+    global grille_aleatoire,afficherchiffre
+
+    if(affchiffre):
+        
+        if(afficherchiffre):
+            afficherchiffre = False
+        else:
+            afficherchiffre = True
 
     coul = ["#FFFFFF", "#FFE100", "#FFC800", 
             "#FFAF00", "#FF9600", "#FF7D00", 
-            "#FF6400", "#FF4B00", "#FF3200"]
+            "#FF6400", "#FF4B00", "#FF3200",
+            "#000000"]
+
     canvas.delete("all")
+
     for i in range(GRILLE_WIDTH):
 
         for h in range(GRILLE_HEIGHT):
 
             valeurs = grille_aleatoire[i][h]
 
-            couleur = coul[valeurs]
+            if(valeurs > 8):
+                couleur = coul[9]
+            else:
+                couleur = coul[valeurs]
 
             canvas.create_rectangle(
                 h*(CANVAS_WIDTH/GRILLE_WIDTH),
@@ -60,14 +76,19 @@ def affiche():
                 fill=couleur,
                 width=0,
             )
+            if(afficherchiffre):
+                if(valeurs > 8):
+                    coultext = "white" 
+                else: 
+                    coultext = "black"
 
-            canvas.create_text(
-                (CANVAS_WIDTH/GRILLE_WIDTH)/2 + (CANVAS_WIDTH/GRILLE_WIDTH)*h,
-                (CANVAS_HEIGHT/GRILLE_HEIGHT)/2 + (CANVAS_HEIGHT/GRILLE_HEIGHT)*i,
-                text=str(valeurs),
-                width=50,
-                fill="black"
-            )
+                canvas.create_text(
+                    (CANVAS_WIDTH/GRILLE_WIDTH)/2 + (CANVAS_WIDTH/GRILLE_WIDTH)*h,
+                    (CANVAS_HEIGHT/GRILLE_HEIGHT)/2 + (CANVAS_HEIGHT/GRILLE_HEIGHT)*i,
+                    text=str(valeurs),
+                    width=50,
+                    fill=coultext
+                )
 
 def aleatoire():
 
@@ -77,9 +98,10 @@ def aleatoire():
 
         for h in range(GRILLE_HEIGHT):
 
-            grille_aleatoire[h][i] = random.randint(0,8)
+            grille_aleatoire[h][i] = random.randint(0,NOMBRE_GRAIN_MAX)
 
-    affiche()
+    affiche(False)
+    stop()
 
 def vide():
     
@@ -91,43 +113,77 @@ def vide():
 
             grille_aleatoire[i][h] = 0
 
-    affiche()
+    affiche(False)
+    stop()
 
-def algo_principale():
+def algo_principale(para = True):
 
     global grille_aleatoire,idduafter,arret
 
     arret = True
 
-    grille_temp = copy.deepcopy(grille_aleatoire)  
+    if(not para):
+        
+        while(arret):
+            
+            arret = False
 
-    for i in range(GRILLE_WIDTH):
+            for i in range(GRILLE_WIDTH):
+            
+                for h in range(GRILLE_HEIGHT):
+
+                    if(grille_aleatoire[i][h]>=4):
+                        if(i != 0):
+                            grille_aleatoire[i-1][h] += 1
+                        if(i != GRILLE_WIDTH-1):
+                            grille_aleatoire[i+1][h] += 1
+                        if(h != 0):
+                            grille_aleatoire[i][h-1] += 1
+                        if(h != GRILLE_HEIGHT-1):
+                            grille_aleatoire[i][h+1] += 1
+                            
+                        grille_aleatoire[i][h] -= 4
+                        arret = True
+        
+        affiche(False)
+
+    else:
+        grille_temp = marshal.loads(marshal.dumps(grille_aleatoire))  
+
+        for i in range(GRILLE_WIDTH):
+        
+            for h in range(GRILLE_HEIGHT):
+
+                if(grille_aleatoire[i][h]>=4):
+                    if(i != 0):
+                        grille_temp[i-1][h] += 1
+                    if(i != GRILLE_WIDTH-1):
+                        grille_temp[i+1][h] += 1
+                    if(h != 0):
+                        grille_temp[i][h-1] += 1
+                    if(h != GRILLE_HEIGHT-1):
+                        grille_temp[i][h+1] += 1
+                        
+                    grille_temp[i][h] -= 4
+                    arret = False
+
+        grille_aleatoire = marshal.loads(marshal.dumps(grille_temp))  
+
+       
+        if(arret):
+            stop()
+
+        idduafter = root.after(10,algo_principale)
+
+  
+    if(para):
+        affiche(False)
     
-        for h in range(GRILLE_HEIGHT):
-
-            if(grille_aleatoire[i][h]>=4):
-                if(i != 0):
-                    grille_temp[i-1][h] += 1
-                if(i != GRILLE_WIDTH-1):
-                    grille_temp[i+1][h] += 1
-                if(h != 0):
-                    grille_temp[i][h-1] += 1
-                if(h != GRILLE_HEIGHT-1):
-                    grille_temp[i][h+1] += 1
-                    
-                grille_temp[i][h] -= 4
-                arret = False
-
-    grille_aleatoire = copy.deepcopy(grille_temp)  
-
-    if(arret):
-        root.after_cancel(idduafter)
     
-    affiche()
-    
-    idduafter = root.after(10,algo_principale)
 
 def stop():
+    global idduafter
+
     root.after_cancel(idduafter)
 
 
@@ -139,14 +195,16 @@ def sauvegarde():
              ('Text Document', '*.txt')]
 
     file = fd.asksaveasfile(
+            mode="wb",
             filetypes = filetypes,
             defaultextension = filetypes
             )
 
-    with open(file, "w") as data:
-        data.write("text from text widget")
+    pickle.dump(grille_aleatoire, file)
 
-    affiche()
+    file.close()
+
+    affiche(False)
 
 def charger():
 
@@ -162,11 +220,78 @@ def charger():
                 filetypes=filetypes
                 )
 
-    grille_aleatoire = filename
+    with open(filename, "rb") as data:
 
-    affiche()
+        grille_aleatoire = pickle.load(data)
+
+    data.close()
+
+    affiche(False)
+
     
+def max_stab():
+    """Met des 3 dans la grille"""
+    global grille_aleatoire
 
+    for i in range(GRILLE_WIDTH):
+
+        for h in range(GRILLE_HEIGHT):
+
+            grille_aleatoire[h][i] = 6
+
+    affiche(False)
+    stop()
+
+def addition():
+    """addition la grille actuelle avec une grille sauvegarder"""
+    global grille_aleatoire
+
+    filetypes = (
+        ('text files', '*.txt'),
+        ('All files', '*.*')
+    )
+
+    filename = fd.askopenfilename(
+                initialdir=os.getcwd()+"/Grilles",
+                filetypes=filetypes
+                )
+
+    with open(filename, "rb") as data:
+
+        grille_aleatoire_add = pickle.load(data)
+
+    data.close()
+
+    affiche(False)
+
+    for i in range(GRILLE_WIDTH):
+
+        for h in range(GRILLE_HEIGHT):
+
+            grille_aleatoire[h][i] = grille_aleatoire[h][i] + grille_aleatoire_add[h][i]
+
+    affiche(False)
+    stop()
+
+def identity():
+
+    """identité"""
+
+    global grille_aleatoire
+
+    for i in range(GRILLE_WIDTH):
+
+        for h in range(GRILLE_HEIGHT):
+
+            grille_aleatoire[h][i] = 6
+
+    grille_aleatoire = marshal.loads(marshal.dumps(grille_aleatoire))
+
+    algo_principale(False)
+
+
+    
+    
 
 # programme principal définition des widgets/événements
 
@@ -184,7 +309,7 @@ bouton_vider = tk.Button(root, text="Vider", font = ("helvetica", "10"), bg="pin
                   ) # création du widget
 bouton_vider.grid(row=2, column=1) # positionnement du widget
 
-bouton_algo = tk.Button(root, text="Commencer", font = ("helvetica", "10"), bg="pink",command=algo_principale
+bouton_algo = tk.Button(root, text="Commencer", font = ("helvetica", "10"), bg="pink",command=lambda: algo_principale(True)
                   ) # création du widget
 bouton_algo.grid(row=2, column=2) # positionnement du widget
 
@@ -200,9 +325,25 @@ bouton_charger = tk.Button(root, text="Charger", font = ("helvetica", "10"), bg=
                   ) # création du widget
 bouton_charger.grid(row=2, column=5) # positionnement du widget
 
-canvas = tk.Canvas(root, bg="black", width = CANVAS_WIDTH, height = CANVAS_HEIGHT, borderwidth=0)
+bouton_chiffre = tk.Button(root, text="Afficher chiffre", font = ("helvetica", "10"), bg="pink",command=lambda: affiche(True)
+                  ) # création du widget
+bouton_chiffre.grid(row=2, column=6) # positionnement du widget
 
-canvas.grid(row=1, column=0,columnspan=6)
+bouton_chiffre = tk.Button(root, text="addition", font = ("helvetica", "10"), bg="pink",command=addition
+                  ) # création du widget
+bouton_chiffre.grid(row=2, column=7) # positionnement du widget
+
+bouton_chiffre = tk.Button(root, text="max stab", font = ("helvetica", "10"), bg="pink",command=max_stab
+                  ) # création du widget
+bouton_chiffre.grid(row=2, column=8) # positionnement du widget
+
+bouton_chiffre = tk.Button(root, text="identity", font = ("helvetica", "10"), bg="pink",command=identity
+                  ) # création du widget
+bouton_chiffre.grid(row=2, column=9) # positionnement du widget
+
+canvas = tk.Canvas(root, bg="white", width = CANVAS_WIDTH*1.5, height = CANVAS_HEIGHT, borderwidth=0)
+
+canvas.grid(row=1, column=0,columnspan=10)
 
 # Fin de votre code
 
